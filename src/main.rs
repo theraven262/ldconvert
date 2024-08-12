@@ -1,3 +1,11 @@
+//! # LUT-Diffuse Converter
+//! 
+//! LUT-Diffuse Converter creates an error-diffused LUT from a color palette and uses it to convert images into that palette.
+//! 
+//! The approach uses "minimized average error" error-diffusion algorithm on the LUT, expanded to diffuse over all three channels. Color calculations are performed in the Oklab color space.
+//! 
+//! Source palette is a png file, colors can repeat, but increase calculation time.
+//! Alpha channel is unaffected by the conversion. Palette index 0 is skipped.
 use clap::Parser;
 use convimage::ConvImage;
 use lookup::{LookupTable, SaveableLookupTable};
@@ -13,36 +21,63 @@ mod convimage;
 extern crate savefile_derive;
 
 #[derive(Parser, Debug)]
-#[command(version, about = "LUT-Diffuse Converter", long_about = "LUT-Diffuse Converter. Make a diffused lookup table from a color palette. Convert images into the desired color palette.")]
+#[command(version, about = "LUT-Diffuse Converter", long_about = "LUT-Diffuse Converter. Makes a diffused lookup table from a color palette. Converts images into the desired color palette.")]
 struct Args {
-    /// Palette image path
+    /// Palette image path.
+    /// 
+    /// Ensure one pixel per color entry.
+    /// 
+    /// Colors can repeat, but redundancy increases LUT generation time.
     #[arg(short, long)]
     palette_path: Option<String>,
-    /// Resulting LUT save path
+    /// Resulting LUT save path.
+    /// 
+    /// If used, the resulting LUT is saved in the provided directory.
+    /// 
+    /// Also used to store the optional LUT slices.
     #[arg(short, long)]
     save_path: Option<String>,
-    /// LUT load path
+    /// LUT load path.
+    /// 
+    /// The location of a bin file which stores a LUT.
     #[arg(short, long)]
     load_path: Option<String>,
-    /// LUT precision, number of discrete steps for each of the RGB channels
+    /// LUT precision, number of discrete steps for each of the RGB channels.
+    /// 
+    /// Use 255 for full u8 png precision.
     #[arg(short, long, default_value = "16")]
     resolution: u32,
-    /// Whether to save images of the resulting LUT
+    /// Whether to save images of the resulting LUT.
+    /// 
+    /// These slice images are saved in the LUT save path.
     #[arg(long, default_value = "false")]
     save_slices: bool,
-    /// Path to images to convert
+    /// Path to a directory containing the images to convert.
     #[arg(short, long)]
     convert_source_path: Option<String>,
-    /// Path to save the resulting images in
+    /// Path to save the resulting images in.
+    /// 
+    /// Created if not found.
+    /// 
+    /// Defaults to the "converted" directory in the source path.
     #[arg(short = 'd', long)]
     convert_destination_path: Option<String>,
-    /// Additional noise to apply during conversion
+    /// Additional noise to apply during conversion.
+    /// 
+    /// If used, keep in the range of 0.005 to 0.025 for best results
     #[arg(short, long, default_value = "0")]
     noise: Option<f32>,
-}
 
+    #[arg(long, hide = true)]
+    markdown_help: bool,
+}
 fn main() {
     let args = Args::parse();
+
+    // Generates help markdown
+    if args.markdown_help {
+        clap_markdown::print_help_markdown::<Args>();
+    }
 
     let lut: LookupTable;
 

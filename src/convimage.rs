@@ -7,9 +7,12 @@ use lookup::LookupTable;
 
 use crate::lookup;
 
+/// Convertable image.
 pub struct ConvImage<'a> {
+    /// Name taken from the filename. The resulting image is saved under this name.
     name: String,
     image: Vec<Vec<Oklaba>>,
+    /// Noise multiplier. Added to each color during lookup.
     noise: Option<f32>,
     lut: &'a LookupTable,
     converted_image: Vec<Vec<Oklaba>>
@@ -38,7 +41,11 @@ impl <'a> ConvImage <'a> {
             converted_image: result_vec
         }
     }
-
+    /// Converts the image into a quantized image.
+    /// 
+    /// Applies the color quantization to the image and stores it.
+    /// 
+    /// Color is handed over to the LUT. Noise is applied here.
     pub fn convert(mut self) -> Self {
         for x in 0..self.image.len() {
             for y in 0..self.image[x].len() {
@@ -53,6 +60,9 @@ impl <'a> ConvImage <'a> {
         self
     }
 
+    /// Saves the resulting image as a png.
+    /// 
+    /// This reduces the final color precision to an u8.
     pub fn save(&self, save_path: &PathBuf) {
         let y_res = self.converted_image.len();
         let x_res = self.converted_image[0].len();

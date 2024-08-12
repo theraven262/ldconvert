@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 extern crate savefile;
 use savefile::prelude::*;
 
+/// Struct used to save Oklab values using Savefile crate.
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Savefile)]
 struct SaveableOklab {
     l: f32,
@@ -15,15 +16,25 @@ struct SaveableOklab {
     b: f32
 }
 
+/// Generates a LUT based on a palette, and does color quantization for convertable images.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LookupTable {
+    /// Used for the naming of the save file.
     name: String,
     values: Vec<Vec<Vec<Oklab>>>,
+    /// LUT resolution.
+    /// 
+    /// The number of steps that each color channel is broken into.
+    /// 
+    /// For the png format, 255 covers all the possible colors.
     resolution: usize,
     palette: HashMap<u32, Oklab>,
+    /// Diffusion kernel.
+    /// Stores the weights used to distribute the error value over nearby colors when quantizing the LUT.
     kernel: Vec<KernelEntry>
 }
 
+/// Same as a LUT, but can be saved using Savefile.
 #[derive(Debug, Clone, Serialize, Deserialize, Savefile)]
 pub struct SaveableLookupTable {
     name: String,
@@ -33,11 +44,18 @@ pub struct SaveableLookupTable {
     kernel: Vec<KernelEntry>
 }
 
+/// Stores the relative coordinates of the color that a part of the error is diffused to.
+/// 
+/// Stores a single weight which describes the amount of error to be diffused to the target color.
 #[derive(Debug, Clone, Serialize, Deserialize, Savefile)]
 struct KernelEntry {
+    /// Number of steps to the target color in the red direction.
     x_offset: i32,
+    /// Number of steps to the target color in the green direction.
     y_offset: i32,
+    /// Number of steps to the target color in the blue direction.
     z_offset: i32,
+    /// Amount of error that this kernel adds to the target color.
     scale: f32
 }
 
@@ -70,6 +88,7 @@ impl From<Oklab> for SaveableOklab {
     }
 }
 
+/// Storage retrieval conversion for LUT.
 impl From<SaveableLookupTable> for LookupTable {
     fn from(lut: SaveableLookupTable) -> LookupTable {
         let resolution = lut.resolution;
@@ -99,6 +118,7 @@ impl From<SaveableLookupTable> for LookupTable {
     }
 }
 
+/// Storage conversion for LUT.
 impl Into<SaveableLookupTable> for &LookupTable {
     fn into(self) -> SaveableLookupTable {
         let resolution = self.resolution;
@@ -129,8 +149,13 @@ impl Into<SaveableLookupTable> for &LookupTable {
 }
 
 impl LookupTable {
+
+    /// Initializes fields and fills the kernel vector.
+    /// 
+    /// Kernel weights are distributed according to the Minimized Average Error algorithm, extended to the third dimension.
+    /// This divides the error into 108 parts.
     pub fn new(palette_path: PathBuf, resolution: usize) -> LookupTable {
-        
+
         let mut lut = LookupTable {
             name: palette_path.file_stem().unwrap().to_str().unwrap().to_string(),
             values: vec![vec![vec![Oklab::new(0f32, 0f32, 0f32); resolution]; resolution]; resolution],
@@ -166,6 +191,7 @@ impl LookupTable {
         lut
     }
 
+    /// Fills the LUT with clean RGB values.
     pub fn populate(mut self) -> Self {
         println!("Populating lookup table...");
         for b in 0..self.resolution {
@@ -181,6 +207,7 @@ impl LookupTable {
         self
     }
 
+    /// Quantizes the LUT with error diffusion.
     pub fn discretize(mut self) -> Self {
         for b in 0..self.resolution {
             println!("Discretizing slice {} out of {}", b, self.resolution);
@@ -218,6 +245,9 @@ impl LookupTable {
         self
     }
 
+    /// Quantizes a color to the nearest color to it in the palette.
+    /// 
+    /// Uses Oklab euclidean distance for color difference calculation.
     fn discretize_color(palette: &HashMap<u32, Oklab>, color: &Oklab) -> Oklab {
         let mut latest_distance = 1000f32;
         let mut target = Oklab::new(0f32, 0f32, 0f32);
@@ -233,10 +263,16 @@ impl LookupTable {
         target
     }
 
+    /// Scales the color components.
+    /// 
+    /// Used for error diffusion, result otherwise nonsensical.
     fn scale(color: Oklab, scale: f32) -> Oklab {
         Oklab::new(color.a * scale, color.b * scale, color.l * scale)
     }
 
+    /// Applies the LUT to a convertible image color.
+    /// 
+    /// The color is rounded to the nearest valid LUT step, in case of a low resolution LUT.
     pub fn lookup(&self, color: Oklaba) -> Oklaba {
         let rgb: Srgb = color.into_color();
 
@@ -256,6 +292,9 @@ impl LookupTable {
         Oklaba::from(self.values[blue][green][red]).with_alpha(color.alpha)
     }
 
+    /// Saves slices of the lookup table as images using the provided save path.
+    /// 
+    /// Slices are used for testing the validity and coverage of the conversion.
     pub fn save_slices(&self, save_path: PathBuf) {
         let mut n = 0i32;
         for slice in &self.values {
@@ -270,13 +309,14 @@ impl LookupTable {
                 }
             }
         let mut current_save_path = save_path.clone();
-        current_save_path.push("slice_".to_owned() + &n.to_string());
+        current_save_path.push(format!("{}_slice_{}", &self.name, n));
         current_save_path.set_extension("png");
         image.into_rgb8().save(current_save_path).unwrap();
         n = n + 1i32;
         }
     }
 
+    /// Saves the LUT as a binary file using the provided save path.
     pub fn save_lut(&self, save_path: PathBuf) {
         let mut save_path = save_path.clone();
         save_path.push(self.name.to_string() + "_lut.bin");
