@@ -44,7 +44,7 @@ jobs:
         with:
           use-cross: true
           command: build
-          args: --verbose --release --target ${{ matrix.target }}
+          args: --verbose --force-non-host --release --target ${{ matrix.target }}
       - name: Build archive
         shell: bash
         run: |
