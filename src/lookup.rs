@@ -321,6 +321,6 @@ impl LookupTable {
         let mut save_path = save_path.clone();
         save_path.push(self.name.to_string() + "_lut.bin");
         let save_lut: SaveableLookupTable = self.into();
-        save_file(save_path, 0, &save_lut).unwrap();
+        save_file(save_path, 1, &save_lut).unwrap();
     }
 }

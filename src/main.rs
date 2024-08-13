@@ -88,7 +88,7 @@ fn main() {
                 panic!("Load path does not point to a bin file.")
             }
             println!("Loading LUT...");
-            lut = LookupTable::from(load_file::<SaveableLookupTable, _>(load_path, 0).unwrap());
+            lut = LookupTable::from(load_file::<SaveableLookupTable, _>(load_path, 1).unwrap());
         }
         None =>  match args.palette_path {
             Some(palette_path) => {
