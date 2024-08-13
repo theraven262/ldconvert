@@ -13,6 +13,7 @@ use std::path::PathBuf;
 use std::thread;
 extern crate savefile;
 use savefile::prelude::*;
+use clap::CommandFactory;
 
 mod lookup;
 mod convimage;
@@ -73,6 +74,7 @@ struct Args {
 }
 fn main() {
     let args = Args::parse();
+    let mut cmd = Args::command();
 
     // Generates help markdown
     if args.markdown_help {
@@ -85,7 +87,8 @@ fn main() {
         Some(load_path) => {
             let load_path = PathBuf::from(load_path);
             if (load_path.is_file() == false) || (load_path.extension().unwrap().to_str().unwrap() != "bin") {
-                panic!("Load path does not point to a bin file.")
+                cmd.print_help().unwrap();
+                panic!("Load path does not point to a bin file.");
             }
             println!("Loading LUT...");
             lut = LookupTable::from(load_file::<SaveableLookupTable, _>(load_path, 1).unwrap());
@@ -94,11 +97,13 @@ fn main() {
             Some(palette_path) => {
                 let palette_path = PathBuf::from(palette_path);
                 if palette_path.is_file() == false {
+                    cmd.print_help().unwrap();
                     panic!("Palette path is not a file.")
                 }
                 lut = LookupTable::new(PathBuf::from(palette_path), args.resolution as usize).populate().discretize();
             }
             None => {
+                cmd.print_help().unwrap();
                 panic!("No palette or load path provided.");
             }
         },
