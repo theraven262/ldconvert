@@ -1,2 +1,5 @@
 /target
 /.vscode
+/debug
+.rustc_info.json
+.rustdoc_fingerprint.json
