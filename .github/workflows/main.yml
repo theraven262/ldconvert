@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v3
       
       - name: Install Rust
-        uses: dtolnay/rust-toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
       - name: Get the release version from the tag
