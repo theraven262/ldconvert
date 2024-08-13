@@ -20,28 +20,31 @@ jobs:
                     - build: linux
                       os: ubuntu-latest
                       target: x86_64-unknown-linux-musl
+                      toolchain: nightly-x86_64-unknown-linux-musl
           
                     - build: macos
                       os: macos-latest
                       target: x86_64-apple-darwin
+                      toolchain: nightly-x86_64-apple-darwin
           
                     - build: windows-gnu
                       os: windows-latest
                       target: x86_64-pc-windows-gnu
+                      toolchain: nightly-x86_64-pc-windows-gnu
       steps:
       - name: Clone repository
         uses: actions/checkout@v3
       
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@nightly
         with:
           targets: ${{ matrix.target }}
       - name: Uninstall toolchain
         shell: bash
-        run: rustup toolchain uninstall ${{ matrix.target }}
+        run: rustup toolchain uninstall nightly
       - name: Reinstall toolchain
         shell: bash
-        run: rustup toolchain install ${{ matrix.target }} --force-non-host
+        run: rustup toolchain install ${{ matrix.toolchain }} --force-non-host
       - name: Get the release version from the tag
         shell: bash
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
