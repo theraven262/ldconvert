@@ -36,6 +36,12 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+      - name: Uninstall toolchain
+        shell: bash
+        run: rustup toolchain uninstall ${{ matrix.target }}
+      - name: Reinstall toolchain
+        shell: bash
+        run: rustup toolchain install ${{ matrix.target }} --force-non-host
       - name: Get the release version from the tag
         shell: bash
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
