@@ -309,7 +309,7 @@ impl LookupTable {
                 }
             }
         let mut current_save_path = save_path.clone();
-        current_save_path.push(format!("{}_slice_{}", &self.name, n));
+        current_save_path.push(format!("{}_slice_{}", &self.name, format!("{:0>3}", n)));
         current_save_path.set_extension("png");
         image.into_rgb8().save(current_save_path).unwrap();
         n = n + 1i32;
