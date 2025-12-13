@@ -48,6 +48,11 @@ struct Args {
     /// Use 255 for full u8 png precision.
     #[arg(short, long, default_value = "16")]
     resolution: u32,
+    /// Internal LUT precision, number of discrete steps for each of the OKLAB channels.
+    /// 
+    /// Sets the resolution of the internal OKLAB LUT
+    #[arg(long, default_value = "64")]
+    internal_resolution: u32,
     /// Whether to save images of the resulting LUT.
     /// 
     /// These slice images are saved in the LUT save path.
@@ -100,7 +105,7 @@ fn main() {
                     cmd.print_help().unwrap();
                     panic!("Palette path is not a file.")
                 }
-                lut = LookupTable::new(PathBuf::from(palette_path), args.resolution as usize).populate().discretize();
+                lut = LookupTable::new(PathBuf::from(palette_path), args.resolution as usize, args.internal_resolution as usize).populate().discretize();
             }
             None => {
                 cmd.print_help().unwrap();
