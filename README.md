@@ -2,16 +2,15 @@
 
 ## LUT-Diffuse Converter
 
-LUT-Diffuse Converter creates an error-diffused LUT from a color palette and uses it to convert images into that palette.
+Creates an error-diffused LUT from an input palette. Can also quantize images using the resulting LUT.
 
-The approach uses "minimized average error" error-diffusion algorithm on the LUT, expanded to diffuse over all three channels. Color calculations are performed in the Oklab color space.
+The approach uses "minimized average error" error-diffusion algorithm on the LUT, performed over the OKLAB colorspace. The algorithm has been modified so as to diffuse over all three channels. Color distance is calculated in the OKLAB colorspace.
+
+There are two LUTs generated: the internal one which contains colors in the OKLAB colorspace and the external one which contains colors in the sRGB space. The resolution of each LUT can be configured. Quantization and error diffusion are done over the OKLAB LUT.
 
 Source palette is a png file, colors can repeat, but increase calculation time.
-Alpha channel is unaffected by the conversion. Palette index 0 is skipped.
-
-# Command-Line Help for `ldconvert`
-
-This document contains the help content for the `ldconvert` command-line program.
+Alpha channel is unaffected by the conversion. 
+Palette index 0 is skipped.
 
 **Command Overview:**
 
@@ -43,6 +42,11 @@ LUT-Diffuse Converter. Makes a diffused lookup table from a color palette. Conve
    Use 255 for full u8 png precision.
 
   Default value: `16`
+* `--internal-resolution <INTERNAL_RESOLUTION>` — Internal LUT precision, number of discrete steps for each of the OKLAB channels.
+
+   Sets the resolution of the internal OKLAB LUT
+
+  Default value: `64`
 * `--save-slices` — Whether to save images of the resulting LUT.
 
    These slice images are saved in the LUT save path.
@@ -63,9 +67,3 @@ LUT-Diffuse Converter. Makes a diffused lookup table from a color palette. Conve
 
 
 <hr/>
-
-<small><i>
-    This document was generated automatically by
-    <a href="https://crates.io/crates/clap-markdown"><code>clap-markdown</code></a>.
-</i></small>
-
