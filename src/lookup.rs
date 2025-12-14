@@ -364,20 +364,21 @@ impl LookupTable {
     pub fn save_slices(&self, save_path: PathBuf) {
         let mut n = 0i32;
         for slice in &self.values {
-            let mut image = DynamicImage::new(self.resolution as u32, self.resolution as u32, image::ColorType::Rgb32F);
+            let mut image = DynamicImage::new(self.resolution as u32, self.resolution as u32, image::ColorType::Rgb32F).into_rgba32f();
 
             for x in 0..self.resolution {
                 for y in 0..self.resolution {
                     let color = slice[x][y];
                     let color_rgb: Srgb<f32> = Srgb::from_color(color);
-                    let pixel = Rgba::<u8>::from([(color_rgb.red * 255f32) as u8, (color_rgb.green * 255f32) as u8, (color_rgb.blue * 255f32) as u8, u8::MAX]);
+                    let pixel = Rgba::from([color_rgb.red, color_rgb.green, color_rgb.blue, 1.0f32]);
                     image.put_pixel(x as u32, y as u32, pixel)
                 }
             }
         let mut current_save_path = save_path.clone();
         current_save_path.push(format!("{}_slice_{}", &self.name, format!("{:0>3}", n)));
         current_save_path.set_extension("png");
-        image.into_rgb8().save(current_save_path).unwrap();
+        let image = DynamicImage::from(image);
+        image.into_rgb16().save(current_save_path).unwrap();
         n = n + 1i32;
         }
     }
