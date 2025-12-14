@@ -1,5 +1,5 @@
 
-use image::{DynamicImage, GenericImage, ImageReader, Rgba};
+use image::{DynamicImage, ImageReader, Rgba};
 use palette::{FromColor, IntoColor, Oklaba, Srgba};
 use std::path::PathBuf;
 use rand::prelude::*;
@@ -69,13 +69,13 @@ impl <'a> ConvImage <'a> {
     pub fn save(&self, save_path: &PathBuf) {
         let y_res = self.converted_image.len();
         let x_res = self.converted_image[0].len();
-        let mut result_image = DynamicImage::new(x_res as u32, y_res as u32, image::ColorType::Rgba32F);
+        let mut result_image = DynamicImage::new(x_res as u32, y_res as u32, image::ColorType::Rgba32F).into_rgba32f();
 
         for y in 0..y_res  {
             for x in 0..x_res {
                 let color = self.converted_image[y][x];
                 let color_rgb: Srgba<f32> = Srgba::from_color(color);
-                let pixel = Rgba::<u8>::from([(color_rgb.red * 255f32) as u8, (color_rgb.green * 255f32) as u8, (color_rgb.blue * 255f32) as u8, (color_rgb.alpha * 255f32) as u8]);
+                let pixel = Rgba::from([color_rgb.red, color_rgb.green, color_rgb.blue, color_rgb.alpha]);
                 result_image.put_pixel(x as u32, y as u32, pixel)
             }
         }
@@ -83,6 +83,7 @@ impl <'a> ConvImage <'a> {
         let mut current_save_path = save_path.clone();
         current_save_path.push(self.name.clone());
         current_save_path.set_extension("png");
-        result_image.into_rgba8().save(current_save_path).unwrap();
+        let result_image = DynamicImage::from(result_image);
+        result_image.into_rgba16().save(current_save_path).unwrap();
     }
 }
