@@ -1,5 +1,5 @@
 
-use image::{DynamicImage, GenericImage, ImageReader, Rgba};
+use image::{DynamicImage, ImageReader, Rgba};
 use palette::color_difference::EuclideanDistance;
 use palette::convert::FromColorUnclamped;
 use palette::{FromColor, IntoColor, IsWithinBounds, Oklab, Oklaba, Srgb, WithAlpha};
@@ -376,6 +376,28 @@ impl LookupTable {
             }
         let mut current_save_path = save_path.clone();
         current_save_path.push(format!("{}_slice_{}", &self.name, format!("{:0>3}", n)));
+        current_save_path.set_extension("png");
+        let image = DynamicImage::from(image);
+        image.into_rgb16().save(current_save_path).unwrap();
+        n = n + 1i32;
+        }
+    }
+
+    pub fn save_internal_slices(&self, save_path: PathBuf) {
+        let mut n = 0i32;
+        for slice in &self.okvalues {
+            let mut image = DynamicImage::new(self.internal_resolution as u32, self.internal_resolution as u32, image::ColorType::Rgb32F).into_rgba32f();
+
+            for x in 0..self.internal_resolution {
+                for y in 0..self.internal_resolution {
+                    let color = slice[x][y];
+                    let color_rgb: Srgb<f32> = Srgb::from_color(color);
+                    let pixel = Rgba::from([color_rgb.red, color_rgb.green, color_rgb.blue, 1.0f32]);
+                    image.put_pixel(x as u32, y as u32, pixel)
+                }
+            }
+        let mut current_save_path = save_path.clone();
+        current_save_path.push(format!("{}_internal_slice_{}", &self.name, format!("{:0>3}", n)));
         current_save_path.set_extension("png");
         let image = DynamicImage::from(image);
         image.into_rgb16().save(current_save_path).unwrap();

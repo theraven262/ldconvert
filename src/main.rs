@@ -58,6 +58,11 @@ struct Args {
     /// These slice images are saved in the LUT save path.
     #[arg(long, default_value = "false")]
     save_slices: bool,
+    /// Whether to save images of the internal OKLAB LUT.
+    /// 
+    /// These slice images are saved in the LUT save path.
+    #[arg(long, default_value = "false")]
+    save_internal_slices: bool,
     /// Path to a directory containing the images to convert.
     #[arg(short, long)]
     convert_source_path: Option<String>,
@@ -125,6 +130,10 @@ fn main() {
             if args.save_slices {
                 println!("Saving slices...");
                 lut.save_slices(PathBuf::from(&save_path));
+            }
+            if args.save_internal_slices {
+                println!("Saving internal slices...");
+                lut.save_internal_slices(PathBuf::from(&save_path));
             }
         }
         None => {}
