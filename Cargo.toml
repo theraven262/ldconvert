@@ -8,7 +8,7 @@ clap = { version = "4.5.15", features = ["derive"] }
 clap-markdown = "0.1.4"
 image = "0.25.2"
 palette = { version = "0.7.6", features = ["serializing"] }
-rand = "0.8.5"
+rand = { version = "0.8.5", features = ["small_rng"] }
 ron = "0.8.1"
 savefile = "0.17.7"
 savefile-derive = "0.17.7"

@@ -3,6 +3,8 @@ use image::{DynamicImage, GenericImage, ImageReader, Rgba};
 use palette::{FromColor, IntoColor, Oklaba, Srgba};
 use std::path::PathBuf;
 use rand::prelude::*;
+use rand::SeedableRng;
+use rand::rngs::SmallRng;
 use lookup::LookupTable;
 
 use crate::lookup;
@@ -28,7 +30,7 @@ impl <'a> ConvImage <'a> {
         for x in 0..image.width() {
             for y in 0..image.height() {
                 let pixel = image.get_pixel(x, y);
-                let color: Oklaba = palette::Srgba::from(pixel.0).into_linear().into_color();
+                let color: Oklaba = palette::Srgba::from(pixel.0).into_color();
                 image_vec[y as usize][x as usize] = color;
             }
         }
@@ -49,8 +51,9 @@ impl <'a> ConvImage <'a> {
     pub fn convert(mut self) -> Self {
         for x in 0..self.image.len() {
             for y in 0..self.image[x].len() {
-                let mut rng = rand::thread_rng();
-                self.converted_image[x][y] = self.lut.lookup(self.image[x][y] + 
+                let color = self.image[x][y];
+                let mut rng = SmallRng::seed_from_u64((x.pow(2) as f32 + y.pow(3) as f32 + color.l * 10000f32 + color.a * 10000f32 + color.b * 10000f32).abs() as u64);
+                self.converted_image[x][y] = self.lut.lookup(color + 
                     Oklaba::new(rng.gen_range(-1.0..=1.0) * self.noise.unwrap_or(0f32), 
                                 rng.gen_range(-1.0..=1.0) * self.noise.unwrap_or(0f32), 
                                 rng.gen_range(-1.0..=1.0) * self.noise.unwrap_or(0f32), 0f32));

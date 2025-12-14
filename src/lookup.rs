@@ -218,7 +218,7 @@ impl LookupTable {
         for y in 0..palette_image.height() {
             for x in 0..palette_image.width() {
                 let pixel = palette_image.get_pixel(x, y);
-                let color: Oklab = palette::Srgb::from(pixel.0).into_linear().into_color();
+                let color: Oklab = palette::Srgb::from(pixel.0).into_color();
                 lut.palette.insert(id, color);
                 id = id + 1u32;
             }
