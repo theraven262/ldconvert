@@ -64,8 +64,6 @@ impl <'a> ConvImage <'a> {
     }
 
     /// Saves the resulting image as a png.
-    /// 
-    /// This reduces the final color precision to an u8.
     pub fn save(&self, save_path: &PathBuf) {
         let y_res = self.converted_image.len();
         let x_res = self.converted_image[0].len();
