@@ -1,8 +1,8 @@
 
 use image::{DynamicImage, ImageReader, Rgba};
 use palette::color_difference::EuclideanDistance;
-use palette::convert::{FromColorUnclamped, IntoColorUnclamped};
-use palette::{FromColor, IntoColor, IsWithinBounds, Oklab, Oklaba, Srgb, Srgba, WithAlpha};
+use palette::convert::{FromColorUnclamped};
+use palette::{FromColor, IntoColor, IsWithinBounds, Oklab, Oklaba, Srgb, WithAlpha};
 use std::path::PathBuf;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
@@ -365,18 +365,9 @@ impl LookupTable {
     pub fn lookup(&self, color: Oklaba) -> Oklaba {
         let rgb: Srgb = color.into_color();
 
-        let mut blue = (rgb.blue * self.resolution as f32).round() as usize;
-        if blue > self.resolution - 1 {
-            blue = self.resolution - 1;
-        }
-        let mut green = (rgb.green * self.resolution as f32).round() as usize;
-        if green > self.resolution - 1 {
-            green = self.resolution - 1;
-        }
-        let mut red = (rgb.red * self.resolution as f32).round() as usize;
-        if red > self.resolution - 1 {
-            red = self.resolution - 1;
-        }
+        let blue = (rgb.blue * self.resolution as f32).floor() as usize;
+        let green = (rgb.green * self.resolution as f32).floor() as usize;
+        let red = (rgb.red * self.resolution as f32).floor() as usize;
 
         Oklaba::from(self.values[blue][green][red]).with_alpha(color.alpha)
     }
