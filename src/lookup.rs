@@ -192,7 +192,7 @@ impl LookupTable {
     /// Initializes fields and fills the kernel vector.
     /// 
     /// Kernel weights are distributed according to the Minimized Average Error algorithm, extended to the third dimension.
-    /// This divides the error into 108 parts.
+    /// This divides the error into 132 parts.
     pub fn new(palette_path: PathBuf, resolution: usize, internal_resolution: usize) -> LookupTable {
 
         let mut lut = LookupTable {
@@ -207,10 +207,14 @@ impl LookupTable {
                 KernelEntry::new(0, 1, -2, 3.0),    KernelEntry::new(0, 1, -1, 5.0),    KernelEntry::new(0, 1, 0, 7.0),     KernelEntry::new(0, 1, 1, 5.0),     KernelEntry::new(0, 1, 2, 3.0),
                 KernelEntry::new(0, 2, -2, 1.0),    KernelEntry::new(0, 2, -1, 3.0),    KernelEntry::new(0, 2, 0, 5.0),     KernelEntry::new(0, 2, 1, 3.0),     KernelEntry::new(0, 2, 2, 1.0),
 
+                                                    KernelEntry::new(1, -2, -1, 1.0),   KernelEntry::new(1, -2, 0, 3.0),    KernelEntry::new(1, -2, 1, 1.0),
+                KernelEntry::new(1, -1, -2, 1.0),   KernelEntry::new(1, -1, -1, 3.0),   KernelEntry::new(1, -1, 0, 5.0),    KernelEntry::new(1, -1, 1, 3.0),    KernelEntry::new(1, -1, 2, 1.0),
                 KernelEntry::new(1, 0, -2, 3.0),    KernelEntry::new(1, 0, -1, 5.0),    KernelEntry::new(1, 0, 0, 7.0),     KernelEntry::new(1, 0, 1, 5.0),     KernelEntry::new(1, 0, 2, 3.0),
                 KernelEntry::new(1, 1, -2, 1.0),    KernelEntry::new(1, 1, -1, 3.0),    KernelEntry::new(1, 1, 0, 5.0),     KernelEntry::new(1, 1, 1, 3.0),     KernelEntry::new(1, 1, 2, 1.0),
                                                     KernelEntry::new(1, 2, -1, 1.0),    KernelEntry::new(1, 2, 0, 3.0),     KernelEntry::new(1, 2, 1, 1.0),
 
+                                                                                        KernelEntry::new(2, -2, 0, 1.0),
+                                                    KernelEntry::new(2, -1, -1, 1.0),   KernelEntry::new(2, -1, 0, 3.0),    KernelEntry::new(2, -1, 1, 1.0),
                 KernelEntry::new(2, 0, -2, 1.0),    KernelEntry::new(2, 0, -1, 3.0),    KernelEntry::new(2, 0, 0, 5.0),     KernelEntry::new(2, 0, 1, 3.0),     KernelEntry::new(2, 0, 2, 1.0),
                                                     KernelEntry::new(2, 1, -1, 1.0),    KernelEntry::new(2, 1, 0, 3.0),     KernelEntry::new(2, 1, 1, 1.0),
                                                                                         KernelEntry::new(2, 2, 0, 1.0),
@@ -236,31 +240,41 @@ impl LookupTable {
 
     /// Fills the LUT with clean RGB and OKLAB values.
     pub fn populate(mut self) -> Self {
+        println!("Populating lookup table [OKLAB] ...");
+        for l in 0..self.internal_resolution {
+            println!("Calculating L slice {}", l);
+            for a in 0..self.internal_resolution {
+                for b in 0..self.internal_resolution {
+                    let l_out = l as f32 / (self.internal_resolution as f32 - 1f32);
+                    let a_out = (a as f32 / (self.internal_resolution as f32 - 1f32)) - 0.5f32;
+                    let b_out = (b as f32 / (self.internal_resolution as f32 - 1f32)) - 0.5f32;
+
+                    let color_out = Oklab::from_components((l_out, a_out, b_out));
+                    self.okvalues[l as usize][a as usize][b as usize] = self.clamp_to_srgb(color_out)
+                }
+            }
+        }
         println!("Populating lookup table [RGB] ...");
         for b in 0..self.resolution {
             for g in 0..self.resolution {
                 for r in 0..self.resolution {
-                    let rgb_color: Srgb<f32> = Srgb::new(r as f32 / self.resolution as f32, g as f32 / self.resolution as f32, b as f32 / self.resolution as f32);
+                    let rgb_color: Srgb<f32> = Srgb::new(r as f32 / (self.resolution as f32 - 1f32), g as f32 / (self.resolution as f32 - 1f32), b as f32 / (self.resolution as f32 - 1f32));
                     let lab_color = Oklab::from_color(rgb_color);
+                    let coord_l = (lab_color.l * (self.internal_resolution as f32 - 1f32)).floor() as usize;
+                    let coord_a = ((lab_color.a + 0.5f32) * (self.internal_resolution as f32 - 1f32)).floor() as usize;
+                    let coord_b = ((lab_color.b + 0.5f32) * (self.internal_resolution as f32 - 1f32)).floor() as usize;
+                    self.okvalues[coord_l][coord_a][coord_b] = Some(lab_color);
+                    let other = Srgb::from_color_unclamped(lab_color);
+                    match other.is_within_bounds() {
+                        false => {
+                            let diff = (rgb_color.red - other.red).abs()+(rgb_color.green - other.green).abs()+(rgb_color.blue - other.blue).abs();
+                            if diff > 1e-5 {
+                                println!("Color out of sRGB bounds by a significant amount when converted back: {}", diff)
+                            }
+                        }
+                        _=>()
+                    };
                     self.values[b][g][r] = lab_color;
-                }
-            }
-        }
-
-        println!("Populating lookup table [OKLAB] ...");
-        for l in 0..self.internal_resolution {
-            for a in 0..self.internal_resolution {
-                for b in 0..self.internal_resolution {
-                    let l_out = l as f32 / self.internal_resolution as f32;
-                    let a_out = (a as f32 / self.internal_resolution as f32) - 0.5f32;
-                    let b_out = (b as f32 / self.internal_resolution as f32) - 0.5f32;
-
-                    let color_out = Oklab::from_components((l_out, a_out, b_out));
-
-                    self.okvalues[l as usize][a as usize][b as usize] = match Srgb::from_color_unclamped(color_out).is_within_bounds() {
-                        true => Some(color_out),
-                        _ => None
-                    }
                 }
             }
         }
@@ -277,13 +291,13 @@ impl LookupTable {
                     match color {
                         Some(color) => {
                             let closest_match = LookupTable::discretize_color(&self.palette, &color);
-                            let difference = LookupTable::scale(color - closest_match, 1f32 / 108f32);
+                            let difference = LookupTable::difference(color, closest_match);
                             self.okvalues[l][a][b] = Some(closest_match);
         
                             for i in &self.kernel {
-                                let x_offset = l as i32 + i.x_offset;
+                                let x_offset = b as i32 + i.x_offset;
                                 let y_offset = a as i32 + i.y_offset;
-                                let z_offset = b as i32 + i.z_offset;
+                                let z_offset = l as i32 + i.z_offset;
         
                                 if (x_offset < 0i32) || (x_offset > self.internal_resolution as i32 - 1i32) {
                                     break
@@ -297,12 +311,15 @@ impl LookupTable {
                                     break
                                 }
 
-                                // Clamp color to visible SRGB on error addition
-                                let other_color = self.okvalues[x_offset as usize][y_offset as usize][z_offset as usize];
+                                // Clamp color to visible SRGB on error addition, do not add error if change moves result more than vlue of delta out of SRGB
+                                let other_color = self.okvalues[z_offset as usize][y_offset as usize][x_offset as usize];
                                 match other_color {
                                     Some(other_color) => {
-                                        let other_result = other_color + LookupTable::scale(difference.clone(), i.scale);
-                                        self.okvalues[x_offset as usize][y_offset as usize][z_offset as usize] = Some(Srgb::from_color(other_result).into_color())
+                                        let other_result = LookupTable::add(other_color, LookupTable::scale(difference.clone(), i.scale / 132f32));
+                                        self.okvalues[z_offset as usize][y_offset as usize][x_offset as usize] = match self.clamp_to_srgb(other_result) {
+                                            Some(result) => Some(result),
+                                            None => self.okvalues[z_offset as usize][y_offset as usize][x_offset as usize]
+                                        };
                                     },
                                     None => ()
                                 }
@@ -320,13 +337,16 @@ impl LookupTable {
             for g in 0..self.resolution {
                 for r in 0..self.resolution {
                     let color = self.values[b][g][r];
-                    let coord_l = (color.l * (self.internal_resolution as f32 - 1f32)).round() as usize;
-                    let coord_a = ((color.a + 0.5f32) * (self.internal_resolution as f32 - 1f32)).round() as usize;
-                    let coord_b = ((color.b + 0.5f32) * (self.internal_resolution as f32 - 1f32)).round() as usize;
+                    let coord_l = (color.l * (self.internal_resolution as f32 - 1f32)).floor() as usize;
+                    let coord_a = ((color.a + 0.5f32) * (self.internal_resolution as f32 - 1f32)).floor() as usize;
+                    let coord_b = ((color.b + 0.5f32) * (self.internal_resolution as f32 - 1f32)).floor() as usize;
                     let color = self.okvalues[coord_l][coord_a][coord_b];
                     self.values[b][g][r] = match color {
                         Some(color) => color,
-                        None => Oklab::from_components((0f32, 0f32, 0f32))
+                        None => {
+                            println!("No fitting value for color R{} G{} B{}!", r, g, b);
+                            Oklab::from_components((0f32, 0f32, 0f32))
+                        }
                     }
                 }
             }
@@ -356,7 +376,29 @@ impl LookupTable {
     /// 
     /// Used for error diffusion, result otherwise nonsensical.
     fn scale(color: Oklab, scale: f32) -> Oklab {
-        Oklab::new(color.a * scale, color.b * scale, color.l * scale)
+        Oklab::new(color.l * scale, color.a * scale, color.b * scale)
+    }
+
+    fn difference(color:Oklab, other: Oklab) -> Oklab {
+        let l = color.l - other.l;
+        let a = (color.a + 0.5f32) - (other.a + 0.5f32);
+        let b = (color.b + 0.5f32) - (other.b + 0.5f32);
+        Oklab::from_components((l, a - 0.5f32, b - 0.5f32))
+    }
+
+    fn add(color:Oklab, other: Oklab) -> Oklab {
+        let l = color.l + other.l;
+        let a = (color.a + 0.5f32) + (other.a + 0.5f32);
+        let b = (color.b + 0.5f32) + (other.b + 0.5f32);
+        Oklab::from_components((l, a - 0.5f32, b - 0.5f32))
+    }
+
+    fn clamp_to_srgb(&self, color: Oklab) -> Option<Oklab> {
+        let just_conv = Srgb::from_color_unclamped(color);
+        match just_conv.is_within_bounds() {
+            true => Some(color),
+            _=> None
+        }
     }
 
     /// Applies the LUT to a convertible image color.
@@ -365,9 +407,9 @@ impl LookupTable {
     pub fn lookup(&self, color: Oklaba) -> Oklaba {
         let rgb: Srgb = color.into_color();
 
-        let blue = (rgb.blue * self.resolution as f32).floor() as usize;
-        let green = (rgb.green * self.resolution as f32).floor() as usize;
-        let red = (rgb.red * self.resolution as f32).floor() as usize;
+        let blue = (rgb.blue * (self.resolution as f32 - 1f32)).floor() as usize;
+        let green = (rgb.green * (self.resolution as f32 - 1f32)).floor() as usize;
+        let red = (rgb.red * (self.resolution as f32 - 1f32)).floor() as usize;
 
         Oklaba::from(self.values[blue][green][red]).with_alpha(color.alpha)
     }
